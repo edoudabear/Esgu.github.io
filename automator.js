@@ -126,7 +126,7 @@ function is_word_in_automaton(word) {
 async function ask_in(word) {
     const questionElement = document.getElementById('question');
 
-    question = 'Is the word "' + word + '" inside your langage?';
+    question = 'Est-ce que le mot "' + word + '" est dans le langage ?';
     questionElement.textContent = question;
 
     // // Force a small delay to ensure the DOM update is rendered
@@ -282,7 +282,6 @@ async function L_star_algorithm() {
       });
     recognized_words.sort();
     document.getElementById('first_words').textContent = recognized_words.join(", ");
-
 }
 
 // Function to handle alphabet submission
@@ -291,13 +290,13 @@ document.getElementById('submitAlphabet').addEventListener('click', function() {
     let tmp_alphabet = alphabetInput.split(',').map(letter => letter.trim()).filter(Boolean); // Filter out empty strings
 
     if (tmp_alphabet.length == 0) {
-    	alert("Your alphabet is empty!");
+    	alert("Ton alphabet est vide !");
     	return;
     }
 
     for (const a of tmp_alphabet)
     	if (a.length != 1) {
-    	    alert("The letter '"+a+"' is not a valid letter. Please remove it.")
+    	    alert("La lettre '"+a+"' n'est pas une lettre valide !")
     	    return;
     	}
 
@@ -318,13 +317,13 @@ document.getElementById('submitCounterexample').addEventListener('click', functi
     const cexLength = cexInput.length;
 
     if (cexLength == 0) {
-    	alert("Please, enter a counterexample");
+    	alert("Veuillez donner un contre-exemple.");
     	return;
     }
     
     for (var i = 0; i < cexLength; i++)
     	if (!(alphabet.has(cexInput.charAt(i)))) {
-          alert("The character '"+cexInput.charAt(i)+"' of your counterexample is not one in the given alphabet!");
+          alert("Le symbole '"+cexInput.charAt(i)+"' de ton contre-exemple n'est pas dans l'alphabet donné !");
           return;
     	}
     
