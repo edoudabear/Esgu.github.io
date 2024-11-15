@@ -17,18 +17,22 @@
   </div>
   
   <div id="question-section" class="hidden">
-    <h2>Aide-moi !</h2>
+    <h2>J'ai besoin d'une réponse !</h2>
     <p id="question"></p>
     <button id="yesButton">Oui</button>
     <button id="noButton">Non</button>
+    <img id="normalgenie" src="normalgenie.png">
   </div>
   
   <div id="automaton" class="hidden">
-    <h2>Automate</h2>
+    <h2>J'ai trouvé !</h2>
+    <p>Je pense que ton langage est reconnu par cet automate !</p>
     <div id="graph"></div>
+    <img id="happygenie" src="happygenie.png">
     <p>Voici les mots de taille au plus 5 reconnus :</p>
     <div id="first_words"></div>
-    <p>Est-ce que cet automate reconnaît ton langage ? Sinon, donne-moi un contre-exemple</p>
+    <p>
+	Si je me suis trompé, donne-moi un contre-exemple</p>
     <p>(soit un mot dans ton langage qui n'est pas reconnu, soit un mot reconnu qui n'est pas dans ton langage).</p>
     <input type="text" id="counterexample" placeholder="">
     <button id="submitCounterexample">OK</button>
