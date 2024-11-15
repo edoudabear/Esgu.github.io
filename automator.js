@@ -184,15 +184,15 @@ async function constructGraphAutomaton() {
 	    }
 	}
     }
-    let graph = 'digraph finite_state_machine {\n\trankdir=LR;\n\tsize="8,5"\n\t"i" [style=invis];\nnode[label=""]\n'
+    let graph = 'digraph finite_state_machine {\n\trankdir=LR;\n\tsize="8,5"\n\t"i" [style=invis];\n'
 
     for (var node in nodes) {
 	let accepting = nodes[node]["accepting"];
 	let start = nodes[node]["start"];
 	if (accepting)
-	    graph += '\t"'+node+'" [shape = doublecircle];\n';
+	    graph += '\t"'+node+'" [shape = doublecircle, label=""];\n';
 	else
-	    graph += '\t"'+node+'" [shape = circle];\n';
+	    graph += '\t"'+node+'" [shape = circle, label=""];\n';
 
 	for (const a of alphabet) {
 	    graph += '\t "' + node + '" -> "' + rows[concat_words(start, a)] + '" [ label = "' + a + '"];\n';
