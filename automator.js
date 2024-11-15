@@ -249,7 +249,13 @@ async function compute_rows() {
     for (const w of T) {
         rows[u].push(await oracle(u,w));
     }
-  }
+		for (const a of alphabet) {
+		    rows[concat_words(u,a)] = [];
+		    for (const w of T) {
+				rows[concat_words(u,a)].push(await oracle(concat_words(u,a),w));
+			}
+		}
+	}
 }
 
 
