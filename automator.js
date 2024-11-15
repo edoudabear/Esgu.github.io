@@ -305,7 +305,6 @@ document.getElementById('submitAlphabet').addEventListener('click', function() {
     
     document.getElementById('alphabet-input').classList.add('hidden');
     document.getElementById('question-section').classList.remove('hidden');
-    document.getElementById('observation-table-container').classList.remove('hidden');
     L_star_algorithm();	
 });
 
