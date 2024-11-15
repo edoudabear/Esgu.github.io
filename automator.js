@@ -184,7 +184,7 @@ async function constructGraphAutomaton() {
 	    }
 	}
     }
-    let graph = 'digraph finite_state_machine {\n\trankdir=LR;\n\tsize="8,5"\n\t"i" [style=invis];\n'
+    let graph = 'digraph finite_state_machine {\n\trankdir=LR;\n\tsize="8,5"\n\t"i" [style=invis];\nnode[label=""]\n'
 
     for (var node in nodes) {
 	let accepting = nodes[node]["accepting"];
