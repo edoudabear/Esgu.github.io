@@ -1,3 +1,4 @@
+// version de esgu
 // Variables for managing state
 let alphabet = new Set();
 
@@ -6,19 +7,19 @@ let S = new Set();
 S.add("ε");
 
 // The set of suffixes
-let T = new Set();
-T.add("ε");
+let E = new Set();
+E.add("ε");
 
-// Dictionary containing words we already asked for
+// Dictionnary containing word we already asked for
 //   for each asked word it will contain true is the user answered yes, false elsewise
 let memoized_words = {};
 
-// Dictionnary representing the result of T over (S U SA, T) where A is the alphabet
+// Dictionnary representing the result of T over (S U SA, E) where A is the alphabet
 //   note: is it recomputed each time in order not to bother to find where things are
 //         this is not a huge issue, since everything is memoized (so no additionnal user request)
 //   note2: we leverage the fact that iterating over the sets is always done in the same order
 //          during an execution. Hence, rows can be stored as prefix -> bool list (the list being
-//          in the order corresponding to the iteration over T).
+//          in the order corresponding to the iteration over E).
 let rows = {};
 
 // Helper function that concatenates two words. This helps get rid of unnecessary empty words
@@ -46,6 +47,19 @@ function compareRows(a, b) {
   return true;
 }
 
+// Helper function that return the first suffix causing array a and b to be different
+function first_difference(a, b) {
+    var i = 0;
+    for (; i < a.length; ++i) {
+	if (a[i] !== b[i])
+	    break;
+    }
+    for (const e of E) {
+	if (i == 0)
+	    return e;
+	i--;
+    }
+}
 
 // Function that enumerates in a list all the words with the alphabet under a given size n
 function enumerate_words(max_len) {
@@ -123,10 +137,10 @@ function is_word_in_automaton(word) {
 // The core function for asking the user wether a word is in the language
 //   It returns a "promise" so that the user can respond at anytime and we
 //   stop the rest of the computation until we get a response
-async function ask_in(word) {
+async function ask_for_T(word) {
     const questionElement = document.getElementById('question');
 
-    question = 'Est-ce que le mot "' + word + '" est dans le langage ?';
+    question = 'Is the word "' + word + '" inside your langage?';
     questionElement.textContent = question;
 
     // // Force a small delay to ensure the DOM update is rendered
@@ -161,12 +175,12 @@ async function ask_in(word) {
 }
 
 
-// A function returning 1 iff oracle(s.e) \in L
+// A function returning 1 iff T(s.e) \in L
 // It uses previous knowledge or asks the user if it doesn't know yet
-async function oracle(u, w) {
-    let word = concat_words(u, w)
+async function T(s, e) {
+    let word = concat_words(s, e)
     if (! (word in memoized_words)) {
-	memoized_words[word] = await ask_in(word);
+	memoized_words[word] = await ask_for_T(word);
     }
     return memoized_words[word];
 }
@@ -179,7 +193,7 @@ async function constructGraphAutomaton() {
     for (const s of S) {
 	if (! (rows[s] in nodes)) {
 	    nodes[rows[s]] = {
-		"accepting" : await oracle(s,"ε"),
+		"accepting" : await T(s,"ε"),
 		"start" : s
 	    }
 	}
@@ -190,9 +204,9 @@ async function constructGraphAutomaton() {
 	let accepting = nodes[node]["accepting"];
 	let start = nodes[node]["start"];
 	if (accepting)
-	    graph += '\t"'+node+'" [shape = doublecircle label=""];\n';
+	    graph += '\t"'+node+'" [shape = doublecircle];\n';
 	else
-	    graph += '\t"'+node+'" [shape = circle label=""];\n';
+	    graph += '\t"'+node+'" [shape = circle];\n';
 
 	for (const a of alphabet) {
 	    graph += '\t "' + node + '" -> "' + rows[concat_words(start, a)] + '" [ label = "' + a + '"];\n';
@@ -223,39 +237,65 @@ function renderGraph(dotData) {
 
 // Wether the current rows describe a closed observation tables
 //   It returns null if the table is closed
-//   ... else it returns a counter example of the form u.a
+//   ... else it returns a counter example of the form s.a
 function is_closed() {
-    for (const u of S) {
+    for (const s of S) {
 	for (const a of alphabet) {
 	    let closed = false;
-	    for (const v of S) {
-		if (compareRows(rows[concat_words(u,a)], rows[v])) {
+	    for (const t of S) {
+		if (compareRows(rows[concat_words(s,a)], rows[t])) {
 		    closed = true;
 		    break;
 		}
 	    }
 	    if (! closed)
-		return concat_words(u,a);
+		return concat_words(s,a);
 	}
     }
     return null;
 }
 
-// Recompute the rows with the observation of S and SA
-async function compute_rows() {
-  rows = {};
-  for (const u of S) {
-    rows[u] = [];
-    for (const w of T) {
-        rows[u].push(await oracle(u,w));
-    }
-		for (const a of alphabet) {
-		    rows[concat_words(u,a)] = [];
-		    for (const w of T) {
-				rows[concat_words(u,a)].push(await oracle(concat_words(u,a),w));
-			}
+// Wether the current rows describe a consistent observation tables
+//   It returns null if the table is consistent
+//   ... else it returns a counter example containing all the data in a dictionnary
+function is_consistent() {
+    for (const s1 of S) {
+	for (const s2 of S) {
+	    if (s1 == s2)
+		continue;
+	    if (!compareRows(rows[s1], rows[s2]))
+		continue;
+
+	    for (const a of alphabet) {
+		if (!compareRows(rows[concat_words(s1, a)], rows[concat_words(s2, a)])) {
+		    return {
+			"s1" : s1,
+			"s2" : s2,
+			"a" : a,
+			"e" : first_difference(rows[concat_words(s1, a)], rows[concat_words(s2, a)])
+		    }
 		}
+	    }
 	}
+    }
+    return null;
+}
+
+// Recompute the rows with the observation of S and S U A
+async function compute_rows() {
+    rows = {};
+    for (const s of S) {
+	rows[s] = [];
+	for (const e of E) {
+	    rows[s].push(await T(s,e));
+	}
+	for (const a of alphabet) {
+	    rows[concat_words(s,a)] = [];
+	    for (const e of E) {
+		rows[concat_words(s,a)].push(await T(concat_words(s,a),e));
+	    }
+	}
+    }
 }
 
 
@@ -264,24 +304,36 @@ async function L_star_algorithm() {
 
     await compute_rows();
     let unclosed_example = is_closed();
-    while (unclosed_example != null) {
-      S.add(unclosed_example);
-      await compute_rows();
-      unclosed_example = is_closed();
+    let unconsistent_example = is_consistent();
+    while (unclosed_example != null || unconsistent_example != null) {
+	await compute_rows();
+	unconsistent_example = is_consistent();
+	unclosed_example = is_closed();
+	if (unconsistent_example != null) {
+	    E.add(concat_words(unconsistent_example["a"], unconsistent_example["e"]));
+	    continue;
+	}
+	if (unclosed_example != null) {
+	    S.add(unclosed_example);
+	    continue;
+	}	
     }
     let automaton_guess = await constructGraphAutomaton();
+    document.querySelector(".wowo-animation").style.animation = "make_wowo 2s";
+    setTimeout(() => { document.querySelector(".wowo-animation").style.animation = "make_wowo 2s" },2000);
     document.getElementById('question-section').classList.add('hidden');
     document.getElementById('automaton').classList.remove('hidden');
     renderGraph(automaton_guess);
     // Arbitrary size 3; should be modified
     let recognized_words = [];
-    let words = enumerate_words(5);
-    enumerate_words(5).forEach( word => {
-    	if (is_word_in_automaton(word))
-    	    recognized_words.push(word);
-      });
+    let words = enumerate_words(3);
+    enumerate_words(3).forEach( word => {
+	if (is_word_in_automaton(word))
+	    recognized_words.push(word);
+    });
     recognized_words.sort();
     document.getElementById('first_words').textContent = recognized_words.join(", ");
+
 }
 
 // Function to handle alphabet submission
@@ -290,21 +342,22 @@ document.getElementById('submitAlphabet').addEventListener('click', function() {
     let tmp_alphabet = alphabetInput.split(',').map(letter => letter.trim()).filter(Boolean); // Filter out empty strings
 
     if (tmp_alphabet.length == 0) {
-    	alert("Ton alphabet est vide !");
-    	return;
+	alert("Your alphabet is empty!");
+	return;
     }
 
     for (const a of tmp_alphabet)
-    	if (a.length != 1) {
-    	    alert("La lettre '"+a+"' n'est pas une lettre valide !")
-    	    return;
-    	}
+	if (a.length != 1) {
+	    alert("The letter '"+a+"' is not a valid letter. Please remove it.")
+	    return;
+	}
 
     for (const a of tmp_alphabet)
-      alphabet.add(a);
+	alphabet.add(a);
     
     document.getElementById('alphabet-input').classList.add('hidden');
     document.getElementById('question-section').classList.remove('hidden');
+    document.getElementById('observation-table-container').classList.remove('hidden');
     L_star_algorithm();	
 });
 
@@ -316,24 +369,84 @@ document.getElementById('submitCounterexample').addEventListener('click', functi
     const cexLength = cexInput.length;
 
     if (cexLength == 0) {
-    	alert("Veuillez donner un contre-exemple.");
-    	return;
+	alert("Please, enter a counterexample");
+	return;
     }
     
     for (var i = 0; i < cexLength; i++)
-    	if (!(alphabet.has(cexInput.charAt(i)))) {
-          alert("Le symbole '"+cexInput.charAt(i)+"' de ton contre-exemple n'est pas dans l'alphabet donné !");
-          return;
-    	}
+	if (!(alphabet.has(cexInput.charAt(i)))) {
+	    alert("The character '"+cexInput.charAt(i)+"' of your counterexample is not one in the given alphabet!");
+	    return;
+	}
     
     
     document.getElementById('question-section').classList.remove('hidden');
     document.getElementById('automaton').classList.add('hidden');
 
-    for (var i = 0; i < cexLength; i++) {
-    	T.add(cexInput.substring(i, cexLength));
+    for (var i = 1; i <= cexLength; i++) {
+	S.add(cexInput.substring(0, i));
     }
 
     L_star_algorithm();
     
 });
+
+gsap.registerPlugin(MotionPathPlugin);
+
+  // init
+	var tl= new TimelineMax();
+	tl.from('.gface', 0.6, {scale: -0, transformOrigin: "center", ease: Power3.easeOut})
+	tl.from('.eyes', 0.6, {scale: -0, transformOrigin: "center", ease: Power3.easeOut},"-=0.3")
+  
+  // eyes animation
+	var tl2= new TimelineMax();
+	tl2.from('.inside', 0.15, {scaleY: 1, transformOrigin: "center", ease: Linear.easeOut})
+	tl2.to('.inside', 0.05, {scaleY: 0, transformOrigin: "center", ease: Linear.easeOut})
+	.to('.inside', 0.4, {scaleY: 1, transformOrigin: "center", ease: Power3.easeOut})
+
+	var speak = new TimelineMax();
+	speak.from('.mouth', 0.15, {scaleY: 1, scaleX : 1, transformOrigin: "center", ease: Linear.easeOut})
+	.to('.mouth', 0.15, {scaleY: 1.5, scaleX : 0.8, transformOrigin: "center", ease: Linear.easeOut})
+	.to('.mouth', 0.15, {scaleY: 2, transformOrigin: "center", ease: Linear.easeOut})
+	.to('.mouth', 0.15, {scaleY: 1, ScaleX : 1, transformOrigin: "center", ease: Linear.easeOut})
+	speak.repeat(-1)
+	let a = setInterval(()=>{
+		setTimeout(()=>{tl2.play(0)},Math.random()*3000)
+		},3000);
+  
+  let success = new TimelineMax();
+  
+  success.from('.nose',2, {
+    transformOrigin : "center",
+    ease : Power3.easeOut,
+    rotate : "360deg"
+  }).from(".hair",1, {
+        transformOrigin : "center",
+        ease : Power3.easeOut,
+        rotate : "360deg"
+          },"-=2")
+  .to(".inside", 0.5, {
+        transformOrigin : "center",
+        ease : Power3.easeOut,
+        scale : "5",
+  },"-=3").
+  to(".inside", 1, {
+        transformOrigin : "center",
+        ease : Power3.easeOut,
+        transform : "",
+  },"-=2.5");
+  
+  let win= () => {
+    clearInterval(a);
+    speak.play(0);
+    success.play(0);
+    setTimeout(()=>{
+      speak.pause();
+      //tl.play(0);
+      tl2.play(0);
+      a = setInterval(()=>{
+		setTimeout(()=>{tl2.play(0)},Math.random()*3000)
+		},3000);
+    },2000)
+  }
+  
